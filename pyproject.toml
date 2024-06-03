@@ -3,7 +3,7 @@ name = "pysched"
 version = "0.1.0"
 description = "Simple python function call scheduler in crontab format"
 authors = ["Leo Feradero Nugraha <leoferaderonugraha@gmail.com>"]
-license = "GNUv3"
+license = {text = "GNU v3"}
 readme = "README.md"
 
 [tool.poetry.dependencies]
