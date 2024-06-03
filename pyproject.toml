@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "pysched"
+version = "0.1.0"
+description = "Simple python function call scheduler in crontab format"
+authors = ["Leo Feradero Nugraha <leoferaderonugraha@gmail.com>"]
+license = "GNUv3"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
