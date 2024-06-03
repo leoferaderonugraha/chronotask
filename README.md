@@ -1,27 +1,27 @@
-# CronTask
+# ChronoTask
 
 A Python function call scheduler that supports crontab-formatted time (also supports async functions).
 
 example of usage:
 
 ```python
-from crontask import CronTask
+from chronotask import ChronoTask
 import time
 
-cron = CronTask()
+task = ChronoTask()
 
 # as a decorator
-@cron.schedule()
+@task.schedule()
 def hello():
     ...
 
 
 # or by call
-cron.register(hello)
+task.register(hello)
 
 
-# start the cron
-cron.start()
+# start the scheduler
+task.start()
 time.sleep(10)
-cron.stop()
+task.stop()
 ```

@@ -6,7 +6,7 @@ from datetime import datetime
 from collections import defaultdict
 
 
-class CronTask:
+class ChronoTask:
     def __init__(self, max_threads: int = 1) -> None:
         self.max_threads = max_threads
         self._scheduled_funcs: t.Dict[t.Callable, str] = {}
@@ -47,15 +47,14 @@ class CronTask:
             now = datetime.now().strftime("%Y-%m-%dT%H:%M")
 
             for func in self._scheduled_funcs.keys():
-                # purposedly not in daemon mode since it may requires
-                # another resource from the main program
-
                 if func in self._exec_tracker[now]:
                     continue
 
                 if not self._match_crontab(self._scheduled_funcs[func]):
                     continue
 
+                # purposedly not in daemon mode since it may requires
+                # another resource from the main program
                 if asyncio.iscoroutinefunction(func):
                     th = Thread(target=asyncio.run,
                                 args=[func()])
