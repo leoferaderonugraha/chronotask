@@ -6,7 +6,7 @@ from datetime import datetime
 from collections import defaultdict
 
 
-class PySched:
+class CronTask:
     def __init__(self, max_threads: int = 1) -> None:
         self.max_threads = max_threads
         self._scheduled_funcs: t.Dict[t.Callable, str] = {}

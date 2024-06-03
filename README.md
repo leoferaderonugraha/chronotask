@@ -1,28 +1,27 @@
-# PySched
+# CronTask
 
-Python function call scheduler with crontab formatted time supports.
-
+A Python function call scheduler that supports crontab-formatted time (also supports async functions).
 
 example of usage:
 
 ```python
-from pysched import PySched
+from crontask import CronTask
 import time
 
-scheduler = PySched()
+cron = CronTask()
 
 # as a decorator
-@scheduler.schedule()
+@cron.schedule()
 def hello():
     ...
 
 
 # or by call
-scheduler.register(hello)
+cron.register(hello)
 
 
-# start the scheduler
-scheduler.start()
+# start the cron
+cron.start()
 time.sleep(10)
-scheduler.stop()
+cron.stop()
 ```
