@@ -10,9 +10,11 @@ class ChronoTask:
     def __init__(self, max_threads: int = 1) -> None:
         self.max_threads = max_threads
         self._scheduled_funcs: t.Dict[t.Callable, str] = {}
+        self._scheduled_funcs_ms: t.Dict[t.Callable, int] = {}
         self._is_running = False
         self._thread = Thread(target=self._process_executions, daemon=True)
         self._exec_tracker: t.Dict[str, t.List] = defaultdict(list)
+        self._start_time = time.time_ns() // 1_000_000
 
     def schedule(self, fmt: str = '* * * * *') -> t.Callable:
         """Schedule a function call with crontab formatted execution time"""
@@ -33,6 +35,12 @@ class ChronoTask:
 
         self._scheduled_funcs[func] = fmt
 
+    def register_ms(self, func: t.Callable, ms: int) -> None:
+        if ms < 100:
+            raise ValueError('Minimum value for ms is 100')
+
+        self._scheduled_funcs_ms[func] = ms
+
     def start(self) -> None:
         self._is_running = True
         self._thread.start()
@@ -41,36 +49,63 @@ class ChronoTask:
         self._is_running = False
         self._thread.join()
 
+    def _process_scheduled_cron(self, exec_time: str) -> None:
+        threads = []
+        for func in self._scheduled_funcs.keys():
+            if func in self._exec_tracker[exec_time]:
+                continue
+
+            if not self._match_crontab(self._scheduled_funcs[func]):
+                continue
+
+            # purposedly not in daemon mode since it may requires
+            # another resource from the main program
+            if asyncio.iscoroutinefunction(func):
+                th = Thread(target=asyncio.run,
+                            args=[func()])
+            else:
+                th = Thread(target=func)
+
+            th.start()
+            threads.append(th)
+
+            if len(threads) >= self.max_threads:
+                for thread in threads:
+                    thread.join()
+
+            self._exec_tracker[exec_time].append(func)
+
+    def _process_scheduled_ms(self) -> None:
+        threads = []
+        current_time = time.time_ns() // 1_000_000
+        for func, ms in self._scheduled_funcs_ms.items():
+            if (current_time - self._start_time) < ms:
+                continue
+
+            # purposedly not in daemon mode since it may requires
+            # another resource from the main program
+            if asyncio.iscoroutinefunction(func):
+                th = Thread(target=asyncio.run,
+                            args=[func()])
+            else:
+                th = Thread(target=func)
+
+            th.start()
+            threads.append(th)
+
+            if len(threads) >= self.max_threads:
+                for thread in threads:
+                    thread.join()
+
+        self._start_time = time.time()
+
     def _process_executions(self) -> None:
         while self._is_running:
-            threads = []
             now = datetime.now().strftime("%Y-%m-%dT%H:%M")
+            self._process_scheduled_cron(now)
+            self._process_scheduled_ms()
 
-            for func in self._scheduled_funcs.keys():
-                if func in self._exec_tracker[now]:
-                    continue
-
-                if not self._match_crontab(self._scheduled_funcs[func]):
-                    continue
-
-                # purposedly not in daemon mode since it may requires
-                # another resource from the main program
-                if asyncio.iscoroutinefunction(func):
-                    th = Thread(target=asyncio.run,
-                                args=[func()])
-                else:
-                    th = Thread(target=func)
-
-                th.start()
-                threads.append(th)
-
-                if len(threads) >= self.max_threads:
-                    for thread in threads:
-                        thread.join()
-
-                self._exec_tracker[now].append(func)
-
-            time.sleep(1)
+            time.sleep(.1)
 
     def _validate_format(self, fmt: str) -> bool:
         fmt_parts = fmt.split(' ')
