@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "chronotask"
-version = "0.1.0"
+version = "0.2.0"
 description = "Simple python function call scheduler in crontab format"
 authors = ["Leo Feradero Nugraha <leoferaderonugraha@gmail.com>"]
 license = "GPL-3.0-or-later"
