@@ -14,7 +14,7 @@ class ChronoTask:
         self._is_running = False
         self._thread = Thread(target=self._process_executions, daemon=True)
         self._exec_tracker: t.Dict[str, t.List] = defaultdict(list)
-        self._start_time = time.time_ns() // 1_000_000
+        self._exec_tracker_ms: t.Dict[t.Callable, int] = {}
 
     def schedule(self, fmt: str = '* * * * *') -> t.Callable:
         """Schedule a function call with crontab formatted execution time"""
@@ -77,27 +77,21 @@ class ChronoTask:
 
     def _process_scheduled_ms(self) -> None:
         threads = []
-        current_time = time.time_ns() // 1_000_000
+
         for func, ms in self._scheduled_funcs_ms.items():
-            if (current_time - self._start_time) < ms:
-                continue
+            last_exec = self._exec_tracker_ms.get(func, 0)
+            current_time = time.time_ns() // 1_000_000
 
-            # purposedly not in daemon mode since it may requires
-            # another resource from the main program
-            if asyncio.iscoroutinefunction(func):
-                th = Thread(target=asyncio.run,
-                            args=[func()])
-            else:
-                th = Thread(target=func)
+            if current_time - last_exec >= ms:
+                th = self._make_thread(func)
+                th.start()
+                threads.append(th)
 
-            th.start()
-            threads.append(th)
+                if len(threads) >= self.max_threads:
+                    for thread in threads:
+                        thread.join()
 
-            if len(threads) >= self.max_threads:
-                for thread in threads:
-                    thread.join()
-
-        self._start_time = time.time()
+                self._exec_tracker_ms[func] = current_time
 
     def _process_executions(self) -> None:
         while self._is_running:
@@ -151,3 +145,11 @@ class ChronoTask:
                 dom_match and
                 month_match and
                 dow_match)
+
+    def _make_thread(self, func: t.Callable) -> Thread:
+        # purposedly not in daemon mode since it may requires
+        # another resource from the main program
+        if asyncio.iscoroutinefunction(func):
+            return Thread(target=asyncio.run, args=[func()])
+
+        return Thread(target=func)
